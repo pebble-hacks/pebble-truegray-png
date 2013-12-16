@@ -3,6 +3,8 @@ pebble-truegray-png
 
 Pebble smartwatch app using Pulse-Width-Modulation and Framebuffer tricks to render grayscale PNGs to Pebble E-Paper Black and White display.
 
+(!Notice! : Uses Pebble SDK 2.0 from developer.getpebble.com/2 )
+
 ### Pebble True Gray PNG Viewer
 The Pebble Smartwatch display is a low-power E-Paper display, like E-Ink, that can only display black or white for each pixel.  By turning pixels on and off quickly a third color, gray, can be created.  
 
