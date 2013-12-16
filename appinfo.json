@@ -1,0 +1,47 @@
+{
+  "uuid": "9a42d2e8-e896-4abb-99c3-1a06b03b582e",
+  "shortName": "pebble-png",
+  "longName": "pebble-png",
+  "companyName": "MakeAwesomeHappen",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": [
+    { 
+      "type": "raw",
+      "name": "IMAGE_1",
+      "file": "einstein.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_2",
+      "file": "shuttle_port.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_3",
+      "file": "dog.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_4",
+      "file": "robot.raw"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_5",
+      "file": "mona_lisa.raw"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_6",
+      "file": "tesla.raw"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_7",
+      "file": "horse.raw"
+    }
+    ]
+  }
+}
