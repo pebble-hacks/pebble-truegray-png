@@ -25,22 +25,6 @@
       "type": "raw",
       "name": "IMAGE_3",
       "file": "dog.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_4",
-      "file": "robot.raw"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_5",
-      "file": "mona_lisa.raw"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_6",
-      "file": "tesla.raw"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_7",
-      "file": "horse.raw"
     }
     ]
   }
