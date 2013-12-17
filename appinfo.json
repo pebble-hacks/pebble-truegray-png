@@ -40,6 +40,10 @@
     }, { 
       "type": "raw",
       "name": "IMAGE_7",
+      "file": "robot.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_8",
       "file": "shuttle.png"
     }
     ]
