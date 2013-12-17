@@ -16,14 +16,18 @@
     { 
       "type": "raw",
       "name": "IMAGE_1",
-      "file": "einstein.png"
+      "file": "start_screen.png"
     }, { 
       "type": "raw",
       "name": "IMAGE_2",
-      "file": "shuttle_port.png"
+      "file": "einstein.png"
     }, { 
       "type": "raw",
       "name": "IMAGE_3",
+      "file": "shuttle_port.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_4",
       "file": "dog.png"
     }
     ]
