@@ -32,11 +32,15 @@
     }, { 
       "type": "raw",
       "name": "IMAGE_5",
-      "file": "shuttle.png"
+      "file": "trex.png"
     }, { 
       "type": "raw",
       "name": "IMAGE_6",
-      "file": "trex.png"
+      "file": "supertux.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_7",
+      "file": "shuttle.png"
     }
     ]
   }
