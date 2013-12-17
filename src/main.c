@@ -18,7 +18,7 @@
 static Window *gray_window;
 static Layer *render_layer;
 
-#define MAX_IMAGES 4
+#define MAX_IMAGES 6
 static int image_index = 0;
 
 static upng_t* upng = NULL;

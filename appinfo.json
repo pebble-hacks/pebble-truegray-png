@@ -29,6 +29,14 @@
       "type": "raw",
       "name": "IMAGE_4",
       "file": "dog.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_5",
+      "file": "shuttle.png"
+    }, { 
+      "type": "raw",
+      "name": "IMAGE_6",
+      "file": "trex.png"
     }
     ]
   }
