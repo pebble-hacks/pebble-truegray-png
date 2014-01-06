@@ -18,7 +18,7 @@
 static Window *gray_window;
 static Layer *render_layer;
 
-#define MAX_IMAGES 8
+#define MAX_IMAGES 1
 static int image_index = 0;
 
 static upng_t* upng = NULL;
@@ -73,7 +73,7 @@ static bool load_png_resource(int index) {
 // layer_dirty so that the Pulse-Width-Modulation occurs "Fast Enough".
 // Because of the timing of layer_dirty callback, other layers such
 // as text_layer can be used to draw ontop of the updated framebuffer.
-static void draw_gray(Layer* layer, GContext *ctx) {
+static void draw_png(Layer* layer, GContext *ctx) {
   GBitmap* bitmap = (GBitmap*)ctx;
   uint8_t* framebuffer = (uint8_t*)bitmap->addr;
   static int pass = 0; // 2 passes for 1 shade of gray with alternate phase
@@ -81,19 +81,10 @@ static void draw_gray(Layer* layer, GContext *ctx) {
   for (int y=0; y < image.height; y++) {
     for (int x=0; x < image.width; x++) {
       // PNG bit order is LSBit, so need to invert it in each byte
-      // to match framebuffers MSBit for each byte (3 - x%4)
+      // to match framebuffers MSBit for each byte (7 - x%8)
       uint8_t color = 
-        image.pixels[(y*image.width + x) / 4] >> ((3 - x%4) * 2) & 0x03;
-      if (color == 0x00) { //Black 2 bit
-        DRAW_PIXEL(framebuffer, x, y, 0);
-      } else if (color == 0x03) { //White 2 bit
-        DRAW_PIXEL(framebuffer, x, y, 1);
-      } else { // 1 shade of Gray for both 0x01 and 0x02
-        // using (x%2 + y%2 + pass)%2 allows for 
-        // pixels next to each other in both x and y to alternate on state
-        // entire thing to alternate state each pass (pulse-width-modulation)
-        DRAW_PIXEL(framebuffer, x, y, (x%2 + y%2 + pass)%2);
-      }
+        image.pixels[(y*image.width + x) / 8] >> ((7 - x%8) * 2) & 0x01;
+      DRAW_PIXEL(framebuffer, x, y, color);
     }
   }
   pass = (pass+1)%2;
@@ -139,7 +130,7 @@ static void window_load(Window *window) {
   render_layer = layer_create(bounds);
 
   // Hook our gray rendering call to the screen refresh
-  layer_set_update_proc(render_layer, draw_gray);
+  layer_set_update_proc(render_layer, draw_png);
   layer_add_child(window_layer, render_layer);
   register_timer(NULL);
 }
