@@ -9,6 +9,21 @@
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
 
+
+void flip_byte(uint8_t* byteval) {
+  uint8_t v = *byteval;
+  uint8_t r = v; // r will be reversed bits of v; first get LSB of v
+  int s = 7; // extra shift needed at end
+
+  for (v >>= 1; v; v >>= 1) {   
+    r <<= 1;
+    r |= v & 1;
+    s--;
+  }
+  r <<= s; // shift when v's highest bits are zero
+  *byteval = r;
+}
+
 static struct main_ui {
   Window* window;
   BitmapLayer* bitmap_layer;
@@ -43,17 +58,19 @@ static bool gbitmap_from_bitmap(
   //Allocate new gbitmap array
   gbitmap->addr = malloc(height * gbitmap->row_size_bytes); 
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "copy rows");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "copy rows from:%p to:%p",
+    bitmap_buffer,gbitmap->addr);
   for(int y = 0; y < height; y++) {
     memcpy(
       &(((uint8_t*)gbitmap->addr)[y * gbitmap->row_size_bytes]), 
-      &(bitmap_buffer[y * (width + 7) / 8]), 
+      &(bitmap_buffer[y * ((width + 7) / 8)]), 
       (width + 7) / 8);
   }
 
-  //for(int i = 0; i < gbitmap->row_size_bytes * height; i++){
-  //  BSWAP_8(&((uint8_t*)gbitmap->addr)[i]);
-  //}
+  // GBitmap pixels are most-significant bit, so need to flip each byte.
+  for(int i = 0; i < gbitmap->row_size_bytes * height; i++){
+    flip_byte(&((uint8_t*)gbitmap->addr)[i]);
+  }
 
   return true;
 }
@@ -75,6 +92,7 @@ static bool load_png_resource(int index) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Loaded:%d", upng_get_error(ui.upng));
   upng_decode(ui.upng);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Decode:%d", upng_get_error(ui.upng));
+
 
 
   gbitmap_from_bitmap(&ui.bitmap, upng_get_buffer(ui.upng),
