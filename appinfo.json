@@ -16,35 +16,7 @@
     { 
       "type": "raw",
       "name": "IMAGE_1",
-      "file": "start_screen.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_2",
-      "file": "einstein.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_3",
-      "file": "shuttle_port.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_4",
-      "file": "dog.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_5",
-      "file": "trex.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_6",
-      "file": "supertux.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_7",
-      "file": "robot.png"
-    }, { 
-      "type": "raw",
-      "name": "IMAGE_8",
-      "file": "shuttle.png"
+      "file": "xkcd.png"
     }
     ]
   }

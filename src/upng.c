@@ -654,6 +654,7 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
 			SET_ERROR(upng, UPNG_EMALFORMED);
 			return upng->error;
 		} else if (btype == 0) {
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "png uncompressed");
 			inflate_uncompressed(upng, out, outsize, &in[inpos], &bp, &pos, insize);	/*no compression */
 		} else {
       APP_LOG(APP_LOG_LEVEL_DEBUG, "start huffman");

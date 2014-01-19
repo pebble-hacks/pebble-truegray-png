@@ -25,10 +25,11 @@ static struct main_ui {
 
 static bool gbitmap_from_bitmap(
     GBitmap* gbitmap, const uint8_t* bitmap_buffer, int width, int height) {
-  //Allocate new gbitmap array
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "free gbitmap array");
   if (gbitmap->addr) {
     free(gbitmap->addr);
   }
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "allocate new gbitmap array");
 
   // Limit PNG to screen size
   width = MIN(width,144);
@@ -37,17 +38,23 @@ static bool gbitmap_from_bitmap(
   // Copy width and height to GBitmap
   gbitmap->bounds.size.w = width;
   gbitmap->bounds.size.h = height;
-  // GBitmap needs to be word aligned per line
-  gbitmap->row_size_bytes = (width + 31) >> 5;
-  // Allocate bytes, not bits
+  // GBitmap needs to be word aligned per line (bytes)
+  gbitmap->row_size_bytes = ((width + 31) / 32 ) * 4;
+  //Allocate new gbitmap array
   gbitmap->addr = malloc(height * gbitmap->row_size_bytes); 
 
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "copy rows");
   for(int y = 0; y < height; y++) {
     memcpy(
       &(((uint8_t*)gbitmap->addr)[y * gbitmap->row_size_bytes]), 
       &(bitmap_buffer[y * (width + 7) / 8]), 
       (width + 7) / 8);
   }
+
+  //for(int i = 0; i < gbitmap->row_size_bytes * height; i++){
+  //  BSWAP_8(&((uint8_t*)gbitmap->addr)[i]);
+  //}
+
   return true;
 }
 
@@ -72,6 +79,7 @@ static bool load_png_resource(int index) {
 
   gbitmap_from_bitmap(&ui.bitmap, upng_get_buffer(ui.upng),
     upng_get_width(ui.upng), upng_get_height(ui.upng));
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "converted to gbitmap");
 
   // Free the png, no longer needed
   upng_free(ui.upng);
