@@ -4,7 +4,7 @@
 // Includes Grayscale support for 1 bit (B&W)
 #include "upng.h"
 
-#define MAX_IMAGES 1
+#define MAX_IMAGES 10
 
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
@@ -140,6 +140,9 @@ static void window_load(Window *window) {
   ui.bitmap_layer = bitmap_layer_create(bounds);
 
   layer_add_child(window_layer, bitmap_layer_get_layer(ui.bitmap_layer));
+  load_png_resource(ui.image_index);
+  bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
+  layer_mark_dirty(bitmap_layer_get_layer(ui.bitmap_layer));
 }
 
 static void window_unload(Window *window) {
