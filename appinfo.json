@@ -1,8 +1,8 @@
 {
-  "uuid": "9a42d2e8-e896-4abb-99c3-1a06b03b582e",
-  "shortName": "truegray-png",
-  "longName": "truegray-png",
-  "companyName": "MattHungerford",
+  "uuid": "5bfacb04-9449-461e-b3e6-7637d490ed53",
+  "shortName": "xkcd set 0",
+  "longName": "xkcd set 0 png viewer",
+  "companyName": "nicetux",
   "versionCode": 1,
   "versionLabel": "1.0.0",
   "watchapp": {
