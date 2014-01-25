@@ -41,7 +41,9 @@ freely, subject to the following restrictions:
 
 #include <pebble.h>
 
-
+//Debug stack overflow
+register uint32_t sp __asm("sp");
+static uint32_t bsp = 0x2001a26c; //stack grows downward from this
 
 #define MAKE_BYTE(b) ((b) & 0xFF)
 #define MAKE_DWORD(a,b,c,d) ((MAKE_BYTE(a) << 24) | (MAKE_BYTE(b) << 16) | (MAKE_BYTE(c) << 8) | MAKE_BYTE(d))
@@ -467,19 +469,17 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 /*inflate a block with dynamic of fixed Huffman tree*/
 static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outsize, const unsigned char *in, unsigned long *bp, unsigned long *pos, unsigned long inlength, unsigned btype)
 {
-	unsigned codetree_buffer[DEFLATE_CODE_BUFFER_SIZE];
-	unsigned codetreeD_buffer[DISTANCE_BUFFER_SIZE];
+  psleep(100);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "start inflate_huffman");
+  psleep(100);
+  //Converted to malloc, was overflowing 2k stack on Pebble
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "large malloc");
+	unsigned* codetree_buffer = (unsigned*)malloc(sizeof(unsigned) * DEFLATE_CODE_BUFFER_SIZE);
+	unsigned* codetreeD_buffer = (unsigned*)malloc(sizeof(unsigned) * DISTANCE_BUFFER_SIZE);
 	unsigned done = 0;
 
 	huffman_tree codetree;
 	huffman_tree codetreeD;
-  psleep(1);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman");
-  psleep(10);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman");
-  psleep(10);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman");
-  psleep(10);
 
 	if (btype == 1) {
     APP_LOG(APP_LOG_LEVEL_DEBUG, "start btype 1");
@@ -501,6 +501,8 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 	while (done == 0) {
 		unsigned code = huffman_decode_symbol(upng, in, bp, &codetree, inlength);
 		if (upng->error != UPNG_EOK) {
+      free(codetree_buffer);
+      free(codetreeD_buffer);
 			return;
 		}
 
@@ -511,6 +513,8 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 			/* literal symbol */
 			if ((*pos) >= outsize) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
+        free(codetree_buffer);
+        free(codetreeD_buffer);
 				return;
 			}
 
@@ -528,6 +532,8 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 			/* error, bit pointer will jump past memory */
 			if (((*bp) >> 3) >= inlength) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
+        free(codetree_buffer);
+        free(codetreeD_buffer);
 				return;
 			}
 			length += read_bits(bp, in, numextrabits);
@@ -535,12 +541,16 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 			/*part 3: get distance code */
 			codeD = huffman_decode_symbol(upng, in, bp, &codetreeD, inlength);
 			if (upng->error != UPNG_EOK) {
+        free(codetree_buffer);
+        free(codetreeD_buffer);
 				return;
 			}
 
 			/* invalid distance code (30-31 are never used) */
 			if (codeD > 29) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
+        free(codetree_buffer);
+        free(codetreeD_buffer);
 				return;
 			}
 
@@ -552,6 +562,8 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 			/* error, bit pointer will jump past memory */
 			if (((*bp) >> 3) >= inlength) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
+        free(codetree_buffer);
+        free(codetreeD_buffer);
 				return;
 			}
 
@@ -563,6 +575,8 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 
 			if ((*pos) + length >= outsize) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
+        free(codetree_buffer);
+        free(codetreeD_buffer);
 				return;
 			}
 
@@ -576,6 +590,10 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 			}
 		}
 	}
+
+  free(codetree_buffer);
+  free(codetreeD_buffer);
+  return;
 }
 #endif //ifdef TINFL
 
@@ -639,7 +657,6 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
 
 		/* ensure next bit doesn't point past the end of the buffer */
 		if ((bp >> 3) >= insize) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "malformed upng");
 			SET_ERROR(upng, UPNG_EMALFORMED);
 			return upng->error;
 		}
@@ -650,14 +667,15 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
 
 		/* process control type appropriateyly */
 		if (btype == 3) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "malformed2 upng");
 			SET_ERROR(upng, UPNG_EMALFORMED);
 			return upng->error;
 		} else if (btype == 0) {
       APP_LOG(APP_LOG_LEVEL_DEBUG, "png uncompressed");
 			inflate_uncompressed(upng, out, outsize, &in[inpos], &bp, &pos, insize);	/*no compression */
 		} else {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "start huffman");
+      psleep(100);
+      //APP_LOG(APP_LOG_LEVEL_DEBUG, "start huffman");
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
 #ifndef TINFL			
       inflate_huffman(upng, out, outsize, &in[inpos], &bp, &pos, insize, btype);	/*compression, btype 01 or 10 */
 #else
@@ -1020,12 +1038,15 @@ upng_error upng_decode(upng_t* upng)
 	if (upng->error != UPNG_EOK) {
 		return upng->error;
 	}
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "upng header done");
 
 	/* if the state is not HEADER (meaning we are ready to decode the image), stop now */
 	if (upng->state != UPNG_HEADER) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "upng header error");
 		return upng->error;
 	}
 
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "release old buffer");
 	/* release old result, if any */
 	if (upng->buffer != 0) {
 		free(upng->buffer);
@@ -1035,6 +1056,8 @@ upng_error upng_decode(upng_t* upng)
 
 	/* first byte of the first chunk after the header */
 	chunk = upng->source.buffer + 33;
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "chunk done");
+  psleep(1);
 
 	/* scan through the chunks, finding the size of all IDAT chunks, and also
 	 * verify general well-formed-ness */
@@ -1077,6 +1100,7 @@ upng_error upng_decode(upng_t* upng)
 	}
 
 	/* allocate enough space for the (compressed and filtered) image data */
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "compressed_size:%d", compressed_size);
 	compressed = (unsigned char*)malloc(compressed_size);
 	if (compressed == NULL) {

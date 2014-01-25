@@ -19,7 +19,7 @@ def build(ctx):
     ctx.env.CFLAGS=['-std=c99',
                         '-mcpu=cortex-m3',
                         '-mthumb',
-                        '-O3',
+                        '-Os',
                         '-g',
                         '-ffunction-sections',
                         '-fdata-sections',
@@ -32,6 +32,9 @@ def build(ctx):
                         '-Wno-error=unused-variable' ]
     
     ctx.env.CFLAGS.append('-Wa,-mimplicit-it=always')
+    #ctx.env.CFLAGS.append('-ffixed-sp')
+    #ctx.env.CFLAGS.append('-ffixed-fp')
+    #ctx.env.CFLAGS.append('-fomit-frame-pointer')
     #ctx.env.CFLAGS.append('-ffast-math')
     #ctx.env.CFLAGS.append('-funroll-loops')
 

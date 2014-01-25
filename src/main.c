@@ -9,6 +9,9 @@
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
 
+//Register stack pointer to print it (needs -ffixed-sp in CFLAGS also)
+register uint32_t sp __asm("sp");
+static uint32_t bsp = 0x2001a26c; //stack grows downward from this
 
 void flip_byte(uint8_t* byteval) {
   uint8_t v = *byteval;
@@ -90,8 +93,10 @@ static bool load_png_resource(int index) {
   resource_load(rHdl, png_raw_buffer, png_raw_size);
   ui.upng = upng_new_from_bytes(png_raw_buffer, png_raw_size);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Loaded:%d", upng_get_error(ui.upng));
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
   upng_decode(ui.upng);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Decode:%d", upng_get_error(ui.upng));
+  return false;
 
 
 
@@ -149,6 +154,7 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
   load_png_resource(ui.image_index);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Loaded initial resource.");
 
