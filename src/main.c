@@ -4,7 +4,7 @@
 // Includes Grayscale support for 1 bit (B&W)
 #include "upng.h"
 
-#define MAX_IMAGES 10
+#define MAX_IMAGES 6
 
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
@@ -96,7 +96,6 @@ static bool load_png_resource(int index) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
   upng_decode(ui.upng);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Decode:%d", upng_get_error(ui.upng));
-  return false;
 
 
 
@@ -157,6 +156,8 @@ static void init(void) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
   load_png_resource(ui.image_index);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Loaded initial resource.");
+
+  light_enable(true);
 
   ui.window = window_create();
   window_set_fullscreen(ui.window, true);

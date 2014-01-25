@@ -20,39 +20,23 @@
     },{
       "type": "raw",
       "name": "IMAGE_2",
-      "file": "shadowfacts.png"
-    },{
-      "type": "raw",
-      "name": "IMAGE_3",
-      "file": "ohm.png"
-    },{
-      "type": "raw",
-      "name": "IMAGE_4",
-      "file": "techno.png"
-    },{
-      "type": "raw",
-      "name": "IMAGE_5",
       "file": "sudo_sandwich.png"
     },{
       "type": "raw",
+      "name": "IMAGE_3",
+      "file": "relativity.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_4",
+      "file": "caption_cats.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_5",
+      "file": "techno.png"
+    },{
+      "type": "raw",
       "name": "IMAGE_6",
-      "file": "pointers.png"
-    },{
-      "type": "raw",
-      "name": "IMAGE_7",
-      "file": "dirty_harry.png"
-    },{
-      "type": "raw",
-      "name": "IMAGE_8",
-      "file": "epoch.png"
-    },{
-      "type": "raw",
-      "name": "IMAGE_9",
-      "file": "prometheus.png"
-    },{
-      "type": "raw",
-      "name": "IMAGE_10",
-      "file": "rembrandt_photo.png"
+      "file": "shadowfacts.png"
     }
     ]
   }
