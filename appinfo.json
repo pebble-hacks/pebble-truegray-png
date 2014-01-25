@@ -24,18 +24,30 @@
     },{
       "type": "raw",
       "name": "IMAGE_3",
-      "file": "relativity.png"
+      "file": "duty_calls.png"
     },{
       "type": "raw",
       "name": "IMAGE_4",
-      "file": "caption_cats.png"
+      "file": "relativity.png"
     },{
       "type": "raw",
       "name": "IMAGE_5",
-      "file": "techno.png"
+      "file": "caption_cats.png"
     },{
       "type": "raw",
       "name": "IMAGE_6",
+      "file": "techno.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_7",
+      "file": "pointers.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_8",
+      "file": "epoch.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_9",
       "file": "shadowfacts.png"
     }
     ]
