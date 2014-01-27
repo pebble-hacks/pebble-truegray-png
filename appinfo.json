@@ -49,6 +49,18 @@
       "type": "raw",
       "name": "IMAGE_9",
       "file": "shadowfacts.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_10",
+      "file": "01-wake_up_sheeple.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_11",
+      "file": "03-wake_up_sheeple.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_12",
+      "file": "05-wake_up_sheeple.png"
     }
     ]
   }
