@@ -39,11 +39,11 @@ freely, subject to the following restrictions:
 //#include "tinfl.h"
 //#define TINFL 1
 
-#include <pebble.h>
+//#include <pebble.h>
 
 //Debug stack overflow
-register uint32_t sp __asm("sp");
-static uint32_t bsp = 0x2001a26c; //stack grows downward from this
+//register uint32_t sp __asm("sp");
+//static uint32_t bsp = 0x2001a26c; //stack grows downward from this
 
 #define MAKE_BYTE(b) ((b) & 0xFF)
 #define MAKE_DWORD(a,b,c,d) ((MAKE_BYTE(a) << 24) | (MAKE_BYTE(b) << 16) | (MAKE_BYTE(c) << 8) | MAKE_BYTE(d))
@@ -223,10 +223,7 @@ static void huffman_tree_create_lengths(upng_t* upng, huffman_tree* tree, const 
 	unsigned* tree1d = malloc(sizeof(unsigned) * MAX_SYMBOLS);
 	unsigned* blcount = malloc(sizeof(unsigned) * MAX_BIT_LENGTH);
 	unsigned* nextcode = malloc(sizeof(unsigned) * MAX_BIT_LENGTH);
-  if( !tree1d || !blcount || !nextcode) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "start inflate_huffman");
-    while(1) psleep(1000);
-  }
+
 	unsigned bits, n, i;
 	unsigned nodefilled = 0;	/*up to which node it is filled */
 	unsigned treepos = 0;	/*position in the tree (1 of the numcodes columns) */
@@ -481,9 +478,7 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 /*inflate a block with dynamic of fixed Huffman tree*/
 static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outsize, const unsigned char *in, unsigned long *bp, unsigned long *pos, unsigned long inlength, unsigned btype)
 {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "start inflate_huffman");
   //Converted to malloc, was overflowing 2k stack on Pebble
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "large malloc");
 	unsigned* codetree_buffer = (unsigned*)malloc(sizeof(unsigned) * DEFLATE_CODE_BUFFER_SIZE);
 	unsigned* codetreeD_buffer = (unsigned*)malloc(sizeof(unsigned) * DISTANCE_BUFFER_SIZE);
 	unsigned done = 0;
@@ -493,7 +488,6 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 
 
 	if (btype == 1) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "start btype 1");
 		/* fixed trees */
 		huffman_tree_init(&codetree, (unsigned*)FIXED_DEFLATE_CODE_TREE, NUM_DEFLATE_CODE_SYMBOLS, DEFLATE_CODE_BITLEN);
 		huffman_tree_init(&codetreeD, (unsigned*)FIXED_DISTANCE_TREE, NUM_DISTANCE_SYMBOLS, DISTANCE_BITLEN);
@@ -502,16 +496,12 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 		unsigned codelengthcodetree_buffer[CODE_LENGTH_BUFFER_SIZE];
 		huffman_tree codelengthcodetree;
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "large malloc done");
 
 		huffman_tree_init(&codetree, codetree_buffer, NUM_DEFLATE_CODE_SYMBOLS, DEFLATE_CODE_BITLEN);
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman_tree 1 init");
 		
     huffman_tree_init(&codetreeD, codetreeD_buffer, NUM_DISTANCE_SYMBOLS, DISTANCE_BITLEN);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman_tree 2 init");
 		huffman_tree_init(&codelengthcodetree, codelengthcodetree_buffer, NUM_CODE_LENGTH_CODES, CODE_LENGTH_BITLEN);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman_tree 3 init");
     
     get_tree_inflate_dynamic(upng, &codetree, &codetreeD, &codelengthcodetree, in, bp, inlength);
 	}
@@ -665,7 +655,6 @@ static void inflate_uncompressed(upng_t* upng, unsigned char* out, unsigned long
 /*inflate the deflated data (cfr. deflate spec); return value is the error*/
 static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned long outsize, const unsigned char *in, unsigned long insize, unsigned long inpos)
 {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "uz_inflate_data");
 	unsigned long bp = 0;	/*bit pointer in the "in" data, current byte is bp >> 3, current bit is bp & 0x7 (from lsb to msb of the byte) */
 	unsigned long pos = 0;	/*byte position in the out buffer */
 
@@ -689,11 +678,8 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
 			SET_ERROR(upng, UPNG_EMALFORMED);
 			return upng->error;
 		} else if (btype == 0) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "png uncompressed");
 			inflate_uncompressed(upng, out, outsize, &in[inpos], &bp, &pos, insize);	/*no compression */
 		} else {
-      //APP_LOG(APP_LOG_LEVEL_DEBUG, "start huffman");
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
 #ifndef TINFL			
       inflate_huffman(upng, out, outsize, &in[inpos], &bp, &pos, insize, btype);	/*compression, btype 01 or 10 */
 #else
@@ -702,12 +688,10 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
       tinfl_decompress(&inflator, &in[inpos], (size_t*)&insize, out, out, (uint8_t*)&outsize, 0);
 			inflate_uncompressed(upng, out, outsize, &in[inpos], &bp, &pos, insize);	/*no compression */
 #endif
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "done huffman");
 		}
 
 		/* stop if an error has occured */
 		if (upng->error != UPNG_EOK) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "error upng");
 			return upng->error;
 		}
 	}
@@ -717,7 +701,6 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
 
 static upng_error uz_inflate(upng_t* upng, unsigned char *out, unsigned long outsize, const unsigned char *in, unsigned long insize)
 {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "uz_inflate");
 	/* we require two bytes for the zlib data header */
 	if (insize < 2) {
 		SET_ERROR(upng, UPNG_EMALFORMED);
@@ -1056,15 +1039,12 @@ upng_error upng_decode(upng_t* upng)
 	if (upng->error != UPNG_EOK) {
 		return upng->error;
 	}
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "upng header done");
 
 	/* if the state is not HEADER (meaning we are ready to decode the image), stop now */
 	if (upng->state != UPNG_HEADER) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "upng header error");
 		return upng->error;
 	}
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "release old buffer");
 	/* release old result, if any */
 	if (upng->buffer != 0) {
 		free(upng->buffer);
@@ -1074,7 +1054,6 @@ upng_error upng_decode(upng_t* upng)
 
 	/* first byte of the first chunk after the header */
 	chunk = upng->source.buffer + 33;
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "chunk done");
 
 	/* scan through the chunks, finding the size of all IDAT chunks, and also
 	 * verify general well-formed-ness */
@@ -1117,12 +1096,8 @@ upng_error upng_decode(upng_t* upng)
 	}
 
 	/* allocate enough space for the (compressed and filtered) image data */
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "compressed_size:%d", compressed_size);
 	compressed = (unsigned char*)malloc(compressed_size);
 	if (compressed == NULL) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "FAILED: malloc compressed_size:%d", compressed_size);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "FAILED: malloc ptr:%p", compressed);
 		SET_ERROR(upng, UPNG_ENOMEM);
 		return upng->error;
 	}
@@ -1155,25 +1130,20 @@ upng_error upng_decode(upng_t* upng)
 
 	/* allocate space to store inflated (but still filtered) data */
 	inflated_size = ((upng->width * (upng->height * upng_get_bpp(upng) + 7)) / 8) + upng->height;
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "inflated_size:%d", inflated_size);
 	inflated = (unsigned char*)malloc(inflated_size);
 	if (inflated == NULL) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "FAILED: malloc inflated_size:%d", inflated_size);
 		free(compressed);
 		SET_ERROR(upng, UPNG_ENOMEM);
 		return upng->error;
 	}
 
 	/* decompress image data */
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "about to decompress");
 	error = uz_inflate(upng, inflated, inflated_size, compressed, compressed_size);
 	if (error != UPNG_EOK) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "decompress failed");
 		free(compressed);
 		free(inflated);
 		return upng->error;
 	}
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "decompress success");
 
 	/* free the compressed compressed data */
 	free(compressed);

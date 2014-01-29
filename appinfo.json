@@ -61,6 +61,14 @@
       "type": "raw",
       "name": "IMAGE_12",
       "file": "05-wake_up_sheeple.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_13",
+      "file": "00-2009_called.png"
+    },{
+      "type": "raw",
+      "name": "IMAGE_14",
+      "file": "01-2009_called.png"
     }
     ]
   }
