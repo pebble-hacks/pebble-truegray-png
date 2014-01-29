@@ -4,7 +4,8 @@
 // Includes Grayscale support for 1 bit (B&W)
 #include "upng.h"
 
-#define MAX_IMAGES 15
+//#define max_images 15
+static uint8_t max_images = 0;
 
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
@@ -144,7 +145,7 @@ static bool load_png_resource(int index) {
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   // Decrement the index (wrap around if negative)
-  ui.image_index = ((ui.image_index - 1) < 0)? (MAX_IMAGES - 1) : (ui.image_index - 1);
+  ui.image_index = ((ui.image_index - 1) < 0)? (max_images - 1) : (ui.image_index - 1);
   load_png_resource(ui.image_index);
   bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
   layer_mark_dirty(bitmap_layer_get_layer(ui.bitmap_layer));
@@ -157,7 +158,7 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "down_click_handler");
   if(ui.prop_animation && !animation_is_scheduled(ui.prop_animation)) {
     // Increment the index (wrap around if necessary)
-    ui.image_index = (ui.image_index + 1) % MAX_IMAGES;
+    ui.image_index = (ui.image_index + 1) % max_images;
     load_png_resource(ui.image_index);
     //bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
     //GRect right_of_screen = {.origin={.x=143,.y=0},.size={.w=144,.h=168}};
@@ -202,6 +203,11 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
+  //Discover how many images from base index
+  while (resource_get_handle(RESOURCE_ID_IMAGE_1 + max_images)) {
+    max_images++;
+  }
+
   light_enable(true);
 
   ui.window = window_create();
