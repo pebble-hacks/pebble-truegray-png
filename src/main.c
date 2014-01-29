@@ -5,7 +5,7 @@
 #include "upng.h"
 
 //#define max_images 15
-static uint8_t max_images = 0;
+static uint8_t max_images = 14;
 
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
@@ -32,7 +32,9 @@ static struct main_ui {
   Window* window;
   BitmapLayer* bitmap_layer;
   BitmapLayer* bitmap_layer_old;
+  Layer* animation_layer;
   PropertyAnimation* prop_animation;
+  AnimationImplementation* animation_implementation;
 
   GBitmap bitmap;
   GBitmap bitmap_old;
@@ -46,20 +48,17 @@ static struct main_ui {
   .upng = NULL
 };
 
+static void app_exit(int32_t status){
+  (*(uint32_t*)NULL) = 0;
+}
+
 static bool gbitmap_from_bitmap(
     GBitmap* gbitmap, const uint8_t* bitmap_buffer, int width, int height) {
 
   //copy current bitmap ptr into old bitmap
   if (gbitmap->addr) {
-    if (ui.bitmap_old.addr) {
-      free(ui.bitmap_old.addr);
-      ui.bitmap_old.addr = gbitmap->addr;
-      gbitmap->addr = NULL;
-    }
-  }
-
-  if (gbitmap->addr) {
-    free(gbitmap->addr);
+    ui.bitmap_old = ui.bitmap;
+    gbitmap->addr = NULL;
   }
 
   // Limit PNG to screen size
@@ -92,16 +91,27 @@ static bool gbitmap_from_bitmap(
 }
 
 static void init_animation(void) {
-  GRect right_of_screen = {.origin={.x=143,.y=0},.size={.w=1,.h=168}};
+  Layer *window_layer = window_get_root_layer(ui.window);
+  GRect bounds = layer_get_bounds(window_layer);
+
+  //GRect right_of_screen = {.origin={.x=143,.y=0},.size={.w=1,.h=168}};
+  
     
   //layer_get_frame(bitmap_layer_get_layer(ui.bitmap_layer)).size};//.w=144,.h=168}};
 
   //layer_set_clips(bitmap_layer_get_layer(ui.bitmap_layer),true);
-  GRect on_screen = layer_get_frame(bitmap_layer_get_layer(ui.bitmap_layer));
+  GRect right_image_bounds = {.origin={.x=144,.y=0},.size={.w=144,.h=168}};
+  GRect left_image_bounds = {.origin={.x=0,.y=0},.size={.w=144,.h=168}};
+
 
   ui.prop_animation = property_animation_create_layer_frame( 
-    bitmap_layer_get_layer(ui.bitmap_layer),
-    &right_of_screen, NULL);// &on_screen);//&bounds);
+    ui.animation_layer,
+    &right_image_bounds, &left_image_bounds);// &on_screen);//&bounds);
+
+  //ui.animation_implementation = {
+
+  //animation_set_implementation((Animation*)ui.prop_animation, 
+
 
   animation_set_duration((Animation*)ui.prop_animation, 1000);
   animation_set_curve((Animation*)ui.prop_animation, AnimationCurveEaseInOut);
@@ -112,6 +122,11 @@ static void init_animation(void) {
 static bool load_png_resource(int index) {
   ResHandle rHdl = resource_get_handle(RESOURCE_ID_IMAGE_1 + ui.image_index);
   int png_raw_size = resource_size(rHdl);
+    
+  if (ui.bitmap_old.addr) {
+    free(ui.bitmap_old.addr);
+  }
+    
   
   if (ui.upng) {
     upng_free(ui.upng);
@@ -120,13 +135,26 @@ static bool load_png_resource(int index) {
 
   psleep(1); // Avoid watchdog kill
   
-  uint8_t* png_raw_buffer = malloc(png_raw_size);
+  uint8_t* png_raw_buffer = malloc(png_raw_size); //freed by upng impl
+  if (png_raw_buffer == NULL) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "malloc png resource buffer failed");
+  }
   resource_load(rHdl, png_raw_buffer, png_raw_size);
   ui.upng = upng_new_from_bytes(png_raw_buffer, png_raw_size);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Loaded:%d", upng_get_error(ui.upng));
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
-  upng_decode(ui.upng);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Decode:%d", upng_get_error(ui.upng));
+  if (ui.upng == NULL) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG malloc error"); 
+    app_exit(1);
+  }
+  if (upng_get_error(ui.upng) != UPNG_EOK) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Loaded:%d line:%d", 
+      upng_get_error(ui.upng), upng_get_error_line(ui.upng));
+    app_exit(1);
+  }
+  if (upng_decode(ui.upng) != UPNG_EOK) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Decode:%d line:%d", 
+      upng_get_error(ui.upng), upng_get_error_line(ui.upng));
+    app_exit(1);
+  }
 
 
 
@@ -148,6 +176,7 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   ui.image_index = ((ui.image_index - 1) < 0)? (max_images - 1) : (ui.image_index - 1);
   load_png_resource(ui.image_index);
   bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
+  bitmap_layer_set_bitmap(ui.bitmap_layer_old, &ui.bitmap_old);
   layer_mark_dirty(bitmap_layer_get_layer(ui.bitmap_layer));
 }
 
@@ -181,15 +210,48 @@ static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  ui.bitmap_layer = bitmap_layer_create(bounds);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "create animation_layer");
+  GRect double_wide = {.origin={.x=0,.y=0},.size={.w=144,.h=168}};
+  ui.animation_layer = layer_create(double_wide);
 
-  layer_add_child(window_layer, bitmap_layer_get_layer(ui.bitmap_layer));
+  layer_add_child(window_layer, ui.animation_layer);
+  
+  //layer_set_bounds(ui.animation_layer, bounds);
+  layer_set_clips(ui.animation_layer, false);
+
+  
+  ui.bitmap_layer_old = bitmap_layer_create(bounds);
+  //layer_set_clips(bitmap_layer_get_layer(ui.bitmap_layer_old), false);
+  
+  ui.bitmap_layer = bitmap_layer_create(bounds);
+  //layer_set_clips(bitmap_layer_get_layer(ui.bitmap_layer), false);
+
+
+  layer_add_child(ui.animation_layer, bitmap_layer_get_layer(ui.bitmap_layer));
+  layer_add_child(ui.animation_layer, bitmap_layer_get_layer(ui.bitmap_layer_old));
+
+  GRect left_image_frame = {.origin={.x=-144,.y=0},.size={.w=144,.h=168}};
+  layer_set_frame(bitmap_layer_get_layer(ui.bitmap_layer_old),left_image_frame);
+
+  GRect right_image_frame = {.origin={.x=0,.y=0},.size={.w=144,.h=168}};
+  layer_set_frame(bitmap_layer_get_layer(ui.bitmap_layer),right_image_frame);
+
+
+  layer_insert_below_sibling(
+    bitmap_layer_get_layer(ui.bitmap_layer_old),
+    bitmap_layer_get_layer(ui.bitmap_layer));
+
+
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "added children");
+
   load_png_resource(ui.image_index);
   bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
+  bitmap_layer_set_bitmap(ui.bitmap_layer_old, &ui.bitmap_old);
   //layer_mark_dirty(bitmap_layer_get_layer(ui.bitmap_layer));
 
   // Animation
   if (ui.prop_animation == NULL) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "init animation");
     init_animation();
   }
  
@@ -204,9 +266,11 @@ static void window_unload(Window *window) {
 
 static void init(void) {
   //Discover how many images from base index
-  while (resource_get_handle(RESOURCE_ID_IMAGE_1 + max_images)) {
-    max_images++;
-  }
+//  while (resource_get_handle(RESOURCE_ID_IMAGE_1 + max_images)) {
+//    max_images++;
+//  }
+  
+//APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
 
   light_enable(true);
 
