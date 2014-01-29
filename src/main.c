@@ -4,7 +4,7 @@
 // Includes Grayscale support for 1 bit (B&W)
 #include "upng.h"
 
-#define MAX_IMAGES 14
+#define MAX_IMAGES 15
 
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
