@@ -13,66 +13,145 @@
   },
   "resources": {
     "media": [
-    { 
+    {
       "type": "raw",
       "name": "IMAGE_1",
       "file": "xkcd_cover.png"
-    },{
+    },
+    {
       "type": "raw",
       "name": "IMAGE_2",
       "file": "sudo_sandwich.png"
-    },{
+    },
+    {
       "type": "raw",
       "name": "IMAGE_3",
-      "file": "duty_calls.png"
-    },{
+      "file": "00-tar.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_4",
-      "file": "relativity.png"
-    },{
+      "file": "01-tar.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_5",
-      "file": "caption_cats.png"
-    },{
+      "file": "03-tar.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_6",
-      "file": "techno.png"
-    },{
+      "file": "relativity.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_7",
-      "file": "pointers.png"
-    },{
+      "file": "caption_cats.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_8",
-      "file": "epoch.png"
-    },{
+      "file": "pointers.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_9",
-      "file": "shadowfacts.png"
-    },{
+      "file": "01-wake_up_sheeple.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_10",
-      "file": "01-wake_up_sheeple.png"
-    },{
+      "file": "03-wake_up_sheeple.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_11",
-      "file": "03-wake_up_sheeple.png"
-    },{
+      "file": "05-wake_up_sheeple.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_12",
-      "file": "05-wake_up_sheeple.png"
-    },{
+      "file": "october_30th.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_13",
-      "file": "00-2009_called.png"
-    },{
+      "file": "00-a-minus-minus.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_14",
-      "file": "01-2009_called.png"
-    },{
+      "file": "01-a-minus-minus.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_15",
-      "file": "october_30th.png"
+      "file": "02-a-minus-minus.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_16",
+      "file": "03-a-minus-minus.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_17",
+      "file": "00-broomstick.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_18",
+      "file": "01-broomstick.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_19",
+      "file": "03-broomstick.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_20",
+      "file": "00-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_21",
+      "file": "01-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_22",
+      "file": "02-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_23",
+      "file": "03-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_24",
+      "file": "00-skifree.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_25",
+      "file": "01-skifree.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_26",
+      "file": "02-skifree.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_27",
+      "file": "alternate_universe.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_28",
+      "file": "rtl.png"
     }
     ]
   }
