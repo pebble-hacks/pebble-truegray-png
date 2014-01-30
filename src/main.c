@@ -1,134 +1,207 @@
 #include <pebble.h>
 
-// True Gray using Phasing and Pulse-Width-Modulation
-// By turning pixels on and off very fast, the apparent average
-// makes the pixel look gray.  Unfortunately the effect can be seen
-// on a large scale as screen flicker.  By alternating consecutive pixels
-// to opposite states ( x=0 off, x=1 on ) the effect can be minimized.
-// Pulse width modulation is handled by switching state each pass,
-// but anything more than 50% cycle ( on->off->on->off) is noticeable,
-// so only 1 shade of gray works.  
-
 // PNG support
-// Includes Grayscale support for 1, 2, 4 and 8 bit
-// Currently we only can support 1 and 2 bit for size
-// And must be created without compression (not enough ram to decompress).
+// Includes Grayscale support for 1 bit (B&W)
 #include "upng.h"
 
-static Window *gray_window;
-static Layer *render_layer;
+//#define max_images 15
+static uint8_t max_images = 0;
 
-#define MAX_IMAGES 8
-static int image_index = 0;
+#define MAX(A,B) ((A>B) ? A : B)
+#define MIN(A,B) ((A<B) ? A : B)
 
-static upng_t* upng = NULL;
+//Register stack pointer to print it (needs -ffixed-sp in CFLAGS also)
+register uint32_t sp __asm("sp");
+static uint32_t bsp = 0x2001a26c; //stack grows downward from this
 
-#pragma pack(push, 1)
-  struct gray_2bit_image {
-    uint8_t bpp;     // supports 1 or 2 bits (bw or gray)
-    uint8_t width;   // Max width 144
-    uint8_t height;  // Max height 168
-    uint8_t* pixels; // Pixel array
-  } image;
-#pragma pack(pop)
+void flip_byte(uint8_t* byteval) {
+  uint8_t v = *byteval;
+  uint8_t r = v; // r will be reversed bits of v; first get LSB of v
+  int s = 7; // extra shift needed at end
+
+  for (v >>= 1; v; v >>= 1) {   
+    r <<= 1;
+    r |= v & 1;
+    s--;
+  }
+  r <<= s; // shift when v's highest bits are zero
+  *byteval = r;
+}
+
+static struct main_ui {
+  Window* window;
+  BitmapLayer* bitmap_layer;
+  BitmapLayer* bitmap_layer_old;
+  Layer* animation_layer;
+  PropertyAnimation* prop_animation;
+  AnimationImplementation* animation_implementation;
+
+  GBitmap bitmap;
+  GBitmap bitmap_old;
+  upng_t* upng;
+  uint8_t image_index;
+} ui = {
+  .bitmap.addr = NULL,
+  .bitmap.bounds = {{0},{0}},
+  .image_index = 0,
+  .prop_animation = NULL,
+  .upng = NULL
+};
+
+static void app_exit(int32_t status){
+  (*(uint32_t*)NULL) = 0;
+}
+
+static bool gbitmap_from_bitmap(
+    GBitmap* gbitmap, const uint8_t* bitmap_buffer, int width, int height) {
+
+  //copy current bitmap ptr into old bitmap
+  if (gbitmap->addr) {
+    ui.bitmap_old = ui.bitmap;
+    gbitmap->addr = NULL;
+  }
+
+  // Limit PNG to screen size
+  width = MIN(width,144);
+  height = MIN(height,168);
+
+  // Copy width and height to GBitmap
+  gbitmap->bounds.size.w = width;
+  gbitmap->bounds.size.h = height;
+  // GBitmap needs to be word aligned per line (bytes)
+  gbitmap->row_size_bytes = ((width + 31) / 32 ) * 4;
+  //Allocate new gbitmap array
+  gbitmap->addr = malloc(height * gbitmap->row_size_bytes); 
+
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "copy rows from:%p to:%p",
+    bitmap_buffer,gbitmap->addr);
+  for(int y = 0; y < height; y++) {
+    memcpy(
+      &(((uint8_t*)gbitmap->addr)[y * gbitmap->row_size_bytes]), 
+      &(bitmap_buffer[y * ((width + 7) / 8)]), 
+      (width + 7) / 8);
+  }
+
+  // GBitmap pixels are most-significant bit, so need to flip each byte.
+  for(int i = 0; i < gbitmap->row_size_bytes * height; i++){
+    flip_byte(&((uint8_t*)gbitmap->addr)[i]);
+  }
+
+  return true;
+}
+
+static void init_animation(void) {
+  Layer *window_layer = window_get_root_layer(ui.window);
+  GRect bounds = layer_get_bounds(window_layer);
+
+  //GRect right_of_screen = {.origin={.x=143,.y=0},.size={.w=1,.h=168}};
+  
+    
+  //layer_get_frame(bitmap_layer_get_layer(ui.bitmap_layer)).size};//.w=144,.h=168}};
+
+  //layer_set_clips(bitmap_layer_get_layer(ui.bitmap_layer),true);
+  GRect right_image_bounds = {.origin={.x=144,.y=0},.size={.w=144,.h=168}};
+  GRect left_image_bounds = {.origin={.x=0,.y=0},.size={.w=144,.h=168}};
 
 
-// Framebuffer width is word aligned, so 160 for 144 wide screen
-#define DRAW_PIXEL( framebuffer, x, y, white ) \
-  framebuffer[((y*160 + x) / 8)] = \
-    ( framebuffer[((y*160 + x) / 8)] \
-    & (0xFF ^ (0x01 << (x%8))) )\
-    | (white << (x%8))
+  ui.prop_animation = property_animation_create_layer_frame( 
+    ui.animation_layer,
+    &right_image_bounds, &left_image_bounds);// &on_screen);//&bounds);
+
+  //ui.animation_implementation = {
+
+  //animation_set_implementation((Animation*)ui.prop_animation, 
+
+
+  animation_set_duration((Animation*)ui.prop_animation, 1000);
+  animation_set_curve((Animation*)ui.prop_animation, AnimationCurveEaseInOut);
+  //animation_set_delay((Animation*)ui.prop_animation, 100);
+}
+
 
 static bool load_png_resource(int index) {
-  ResHandle rHdl = resource_get_handle(RESOURCE_ID_IMAGE_1 + image_index);
+  ResHandle rHdl = resource_get_handle(RESOURCE_ID_IMAGE_1 + ui.image_index);
   int png_raw_size = resource_size(rHdl);
+    
+  if (ui.bitmap_old.addr) {
+    free(ui.bitmap_old.addr);
+  }
+    
   
-  if (upng) {
-    upng_free(upng);
-    upng = NULL;
+  if (ui.upng) {
+    upng_free(ui.upng);
+    ui.upng = NULL;
   }
 
   psleep(1); // Avoid watchdog kill
   
-  uint8_t* png_raw_buffer = malloc(png_raw_size);
+  uint8_t* png_raw_buffer = malloc(png_raw_size); //freed by upng impl
+  if (png_raw_buffer == NULL) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "malloc png resource buffer failed");
+  }
   resource_load(rHdl, png_raw_buffer, png_raw_size);
-  upng = upng_new_from_bytes(png_raw_buffer, png_raw_size);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Loaded:%d", upng_get_error(upng));
-  upng_decode(upng);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Decode:%d", upng_get_error(upng));
+  ui.upng = upng_new_from_bytes(png_raw_buffer, png_raw_size);
+  if (ui.upng == NULL) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG malloc error"); 
+    app_exit(1);
+  }
+  if (upng_get_error(ui.upng) != UPNG_EOK) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Loaded:%d line:%d", 
+      upng_get_error(ui.upng), upng_get_error_line(ui.upng));
+    app_exit(1);
+  }
+  if (upng_decode(ui.upng) != UPNG_EOK) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "UPNG Decode:%d line:%d", 
+      upng_get_error(ui.upng), upng_get_error_line(ui.upng));
+    app_exit(1);
+  }
 
-  image.pixels = upng_get_buffer(upng);
-  image.width = upng_get_width(upng);
-  image.height = upng_get_height(upng);
-  image.bpp = upng_get_bpp(upng);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "PNG info width:%d height:%d bpp:%d", 
-    image.width, image.height, image.bpp);
+
+
+  gbitmap_from_bitmap(&ui.bitmap, upng_get_buffer(ui.upng),
+    upng_get_width(ui.upng), upng_get_height(ui.upng));
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "converted to gbitmap");
+
+  // Free the png, no longer needed
+  upng_free(ui.upng);
+  ui.upng = NULL;
 
   psleep(1); // Avoid watchdog kill  
-}
-
-// This draws the gray image buffer struct to the screen framebuffer
-// and is triggered by layer_dirty.  A timer is set to force
-// layer_dirty so that the Pulse-Width-Modulation occurs "Fast Enough".
-// Because of the timing of layer_dirty callback, other layers such
-// as text_layer can be used to draw ontop of the updated framebuffer.
-static void draw_gray(Layer* layer, GContext *ctx) {
-  GBitmap* bitmap = (GBitmap*)ctx;
-  uint8_t* framebuffer = (uint8_t*)bitmap->addr;
-  static int pass = 0; // 2 passes for 1 shade of gray with alternate phase
-
-  for (int y=0; y < image.height; y++) {
-    for (int x=0; x < image.width; x++) {
-      // PNG bit order is LSBit, so need to invert it in each byte
-      // to match framebuffers MSBit for each byte (3 - x%4)
-      uint8_t color = 
-        image.pixels[(y*image.width + x) / 4] >> ((3 - x%4) * 2) & 0x03;
-      if (color == 0x00) { //Black 2 bit
-        DRAW_PIXEL(framebuffer, x, y, 0);
-      } else if (color == 0x03) { //White 2 bit
-        DRAW_PIXEL(framebuffer, x, y, 1);
-      } else { // 1 shade of Gray for both 0x01 and 0x02
-        // using (x%2 + y%2 + pass)%2 allows for 
-        // pixels next to each other in both x and y to alternate on state
-        // entire thing to alternate state each pass (pulse-width-modulation)
-        DRAW_PIXEL(framebuffer, x, y, (x%2 + y%2 + pass)%2);
-      }
-    }
-  }
-  pass = (pass+1)%2;
-}
-
-
-// Forces window updates by marking the screen dirty
-// which causes a layer redraw callback
-static void register_timer(void* data) {
-  // 20ms == 50fps, anything above shows flicker
-  // Always has a little flicker in direct sunlight
-  // Causes watchdog timer reset if < 15ms
-  app_timer_register(15, register_timer, data);
-  layer_mark_dirty(render_layer);
+  return true;
 }
 
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   // Decrement the index (wrap around if negative)
-  image_index = ((image_index - 1) < 0)? (MAX_IMAGES - 1) : (image_index - 1);
-  load_png_resource(image_index);
+  ui.image_index = ((ui.image_index - 1) < 0)? (max_images - 1) : (ui.image_index - 1);
+  load_png_resource(ui.image_index);
+  bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
+  bitmap_layer_set_bitmap(ui.bitmap_layer_old, &ui.bitmap_old);
+  layer_mark_dirty(bitmap_layer_get_layer(ui.bitmap_layer));
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  // Increment the index (wrap around if necessary)
-  image_index = (image_index + 1) % MAX_IMAGES;
-  load_png_resource(image_index);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "down_click_handler");
+  if(ui.prop_animation && !animation_is_scheduled(ui.prop_animation)) {
+    // Increment the index (wrap around if necessary)
+    ui.image_index = (ui.image_index + 1) % max_images;
+    load_png_resource(ui.image_index);
+    //bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
+    //GRect right_of_screen = {.origin={.x=143,.y=0},.size={.w=144,.h=168}};
+    //((myLayer*)bitmap_layer_get_layer(ui.bitmap_layer))->bounds = right_of_screen;
+    //((myLayer*)bitmap_layer_get_layer(ui.bitmap_layer))->clips = false;
+    //layer_set_frame(bitmap_layer_get_layer(ui.bitmap_layer), right_of_screen);
+  
+    animation_schedule((Animation*)ui.prop_animation);
+  }
 }
 
 static void click_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
 
@@ -136,39 +209,87 @@ static void click_config_provider(void *context) {
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
-  render_layer = layer_create(bounds);
 
-  // Hook our gray rendering call to the screen refresh
-  layer_set_update_proc(render_layer, draw_gray);
-  layer_add_child(window_layer, render_layer);
-  register_timer(NULL);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "create animation_layer");
+  GRect double_wide = {.origin={.x=0,.y=0},.size={.w=144,.h=168}};
+  ui.animation_layer = layer_create(double_wide);
+
+  layer_add_child(window_layer, ui.animation_layer);
+  
+  //layer_set_bounds(ui.animation_layer, bounds);
+  layer_set_clips(ui.animation_layer, false);
+
+  
+  ui.bitmap_layer_old = bitmap_layer_create(bounds);
+  //layer_set_clips(bitmap_layer_get_layer(ui.bitmap_layer_old), false);
+  
+  ui.bitmap_layer = bitmap_layer_create(bounds);
+  //layer_set_clips(bitmap_layer_get_layer(ui.bitmap_layer), false);
+
+
+  layer_add_child(ui.animation_layer, bitmap_layer_get_layer(ui.bitmap_layer));
+  layer_add_child(ui.animation_layer, bitmap_layer_get_layer(ui.bitmap_layer_old));
+
+  GRect left_image_frame = {.origin={.x=-144,.y=0},.size={.w=144,.h=168}};
+  layer_set_frame(bitmap_layer_get_layer(ui.bitmap_layer_old),left_image_frame);
+
+  GRect right_image_frame = {.origin={.x=0,.y=0},.size={.w=144,.h=168}};
+  layer_set_frame(bitmap_layer_get_layer(ui.bitmap_layer),right_image_frame);
+
+
+  layer_insert_below_sibling(
+    bitmap_layer_get_layer(ui.bitmap_layer_old),
+    bitmap_layer_get_layer(ui.bitmap_layer));
+
+
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "added children");
+
+  load_png_resource(ui.image_index);
+  bitmap_layer_set_bitmap(ui.bitmap_layer, &ui.bitmap);
+  bitmap_layer_set_bitmap(ui.bitmap_layer_old, &ui.bitmap_old);
+  //layer_mark_dirty(bitmap_layer_get_layer(ui.bitmap_layer));
+
+  // Animation
+  if (ui.prop_animation == NULL) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "init animation");
+    init_animation();
+  }
+ 
+  
 }
 
 static void window_unload(Window *window) {
+  if (ui.prop_animation != NULL) {
+    property_animation_destroy(ui.prop_animation);
+  }
 }
 
 static void init(void) {
-  //Allocate 4-bit grayscale buffer
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "About to load initial resource.");
-  image_index = 0;
-  load_png_resource(image_index);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Loaded initial resource.");
+  //Discover how many images from base index
+  while (resource_get_handle(RESOURCE_ID_IMAGE_1 + max_images)) {
+    max_images++;
+  }
+  
+//APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
 
-  gray_window = window_create();
-  window_set_fullscreen(gray_window, true);
-  window_set_click_config_provider(gray_window, click_config_provider);
-  window_set_window_handlers(gray_window, (WindowHandlers) {
+  light_enable(true);
+
+  ui.window = window_create();
+  window_set_fullscreen(ui.window, true);
+  window_set_background_color(ui.window, GColorClear);
+  window_set_click_config_provider(ui.window, click_config_provider);
+  window_set_window_handlers(ui.window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,
   });
   const bool animated = false;
-  window_stack_push(gray_window, animated);
+  window_stack_push(ui.window, animated);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "window push.");
 }
 
 static void deinit(void) {
-  window_destroy(gray_window);
-  if (upng) upng_free(upng);
+  window_destroy(ui.window);
+  if (ui.upng) upng_free(ui.upng);
 }
 
 int main(void) {

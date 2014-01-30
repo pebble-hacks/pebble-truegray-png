@@ -38,10 +38,11 @@ freely, subject to the following restrictions:
 //saves about 900 bytes, but still crashing watch
 //#include "tinfl.h"
 //#define TINFL 1
-
 #include <pebble.h>
 
-
+//Debug stack overflow
+//register uint32_t sp __asm("sp");
+//static uint32_t bsp = 0x2001a26c; //stack grows downward from this
 
 #define MAKE_BYTE(b) ((b) & 0xFF)
 #define MAKE_DWORD(a,b,c,d) ((MAKE_BYTE(a) << 24) | (MAKE_BYTE(b) << 16) | (MAKE_BYTE(c) << 8) | MAKE_BYTE(d))
@@ -62,7 +63,7 @@ freely, subject to the following restrictions:
 #define DEFLATE_CODE_BITLEN 15
 #define DISTANCE_BITLEN 15
 #define CODE_LENGTH_BITLEN 7
-#define MAX_BIT_LENGTH 15 /* largest bitlen used by any tree type */
+#define MAX_BIT_LENGTH 15 // bug? 15 /* largest bitlen used by any tree type */
 
 #define DEFLATE_CODE_BUFFER_SIZE (NUM_DEFLATE_CODE_SYMBOLS * 2)
 #define DISTANCE_BUFFER_SIZE (NUM_DISTANCE_SYMBOLS * 2)
@@ -114,35 +115,35 @@ struct upng_t {
 
 #ifndef TINFL
 typedef struct huffman_tree {
-	unsigned* tree2d;
-	unsigned maxbitlen;	/*maximum number of bits a single code can get */
-	unsigned numcodes;	/*number of symbols in the alphabet = number of codes */
+	uint16_t* tree2d;
+	uint16_t maxbitlen;	/*maximum number of bits a single code can get */
+	uint16_t numcodes;	/*number of symbols in the alphabet = number of codes */
 } huffman_tree;
 
-static const unsigned LENGTH_BASE[29] = {	/*the base lengths represented by codes 257-285 */
+static const uint16_t LENGTH_BASE[29] = {	/*the base lengths represented by codes 257-285 */
 	3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59,
 	67, 83, 99, 115, 131, 163, 195, 227, 258
 };
 
-static const unsigned LENGTH_EXTRA[29] = {	/*the extra bits used by codes 257-285 (added to base length) */
+static const uint16_t LENGTH_EXTRA[29] = {	/*the extra bits used by codes 257-285 (added to base length) */
 	0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5,
 	5, 5, 5, 0
 };
 
-static const unsigned DISTANCE_BASE[30] = {	/*the base backwards distances (the bits of distance codes appear after length codes and use their own huffman tree) */
+static const uint16_t DISTANCE_BASE[30] = {	/*the base backwards distances (the bits of distance codes appear after length codes and use their own huffman tree) */
 	1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513,
 	769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577
 };
 
-static const unsigned DISTANCE_EXTRA[30] = {	/*the extra bits of backwards distances (added to base) */
+static const uint16_t DISTANCE_EXTRA[30] = {	/*the extra bits of backwards distances (added to base) */
 	0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10,
 	11, 11, 12, 12, 13, 13
 };
 
-static const unsigned CLCL[NUM_CODE_LENGTH_CODES]	/*the order in which "code length alphabet code lengths" are stored, out of this the huffman tree of the dynamic huffman tree lengths is generated */
+static const uint16_t CLCL[NUM_CODE_LENGTH_CODES]	/*the order in which "code length alphabet code lengths" are stored, out of this the huffman tree of the dynamic huffman tree lengths is generated */
 = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
 
-static const unsigned FIXED_DEFLATE_CODE_TREE[NUM_DEFLATE_CODE_SYMBOLS * 2] = {
+static const uint16_t FIXED_DEFLATE_CODE_TREE[NUM_DEFLATE_CODE_SYMBOLS * 2] = {
 	289, 370, 290, 307, 546, 291, 561, 292, 293, 300, 294, 297, 295, 296, 0, 1,
 	2, 3, 298, 299, 4, 5, 6, 7, 301, 304, 302, 303, 8, 9, 10, 11, 305, 306, 12,
 	13, 14, 15, 308, 339, 309, 324, 310, 317, 311, 314, 312, 313, 16, 17, 18,
@@ -182,7 +183,7 @@ static const unsigned FIXED_DEFLATE_CODE_TREE[NUM_DEFLATE_CODE_SYMBOLS * 2] = {
 	572, 570, 571, 280, 281, 282, 283, 573, 574, 284, 285, 286, 287, 0, 0
 };
 
-static const unsigned FIXED_DISTANCE_TREE[NUM_DISTANCE_SYMBOLS * 2] = {
+static const uint16_t FIXED_DISTANCE_TREE[NUM_DISTANCE_SYMBOLS * 2] = {
 	33, 48, 34, 41, 35, 38, 36, 37, 0, 1, 2, 3, 39, 40, 4, 5, 6, 7, 42, 45, 43,
 	44, 8, 9, 10, 11, 46, 47, 12, 13, 14, 15, 49, 56, 50, 53, 51, 52, 16, 17,
 	18, 19, 54, 55, 20, 21, 22, 23, 57, 60, 58, 59, 24, 25, 26, 27, 61, 62, 28,
@@ -207,7 +208,7 @@ static unsigned read_bits(unsigned long *bitpointer, const unsigned char *bitstr
 }
 
 /* the buffer must be numcodes*2 in size! */
-static void huffman_tree_init(huffman_tree* tree, unsigned* buffer, unsigned numcodes, unsigned maxbitlen)
+static void huffman_tree_init(huffman_tree* tree, uint16_t* buffer, uint16_t numcodes, uint16_t maxbitlen)
 {
 	tree->tree2d = buffer;
 
@@ -216,18 +217,25 @@ static void huffman_tree_init(huffman_tree* tree, unsigned* buffer, unsigned num
 }
 
 /*given the code lengths (as stored in the PNG file), generate the tree as defined by Deflate. maxbitlen is the maximum bits that a code in the tree can have. return value is error.*/
-static void huffman_tree_create_lengths(upng_t* upng, huffman_tree* tree, const unsigned *bitlen)
+static void huffman_tree_create_lengths(upng_t* upng, huffman_tree* tree, const uint16_t *bitlen)
 {
-	unsigned tree1d[MAX_SYMBOLS];
-	unsigned blcount[MAX_BIT_LENGTH];
-	unsigned nextcode[MAX_BIT_LENGTH];
-	unsigned bits, n, i;
-	unsigned nodefilled = 0;	/*up to which node it is filled */
-	unsigned treepos = 0;	/*position in the tree (1 of the numcodes columns) */
+	uint16_t* tree1d = malloc(sizeof(uint16_t) * MAX_SYMBOLS);
+  uint16_t blcount[MAX_BIT_LENGTH];
+  uint16_t nextcode[MAX_BIT_LENGTH];
+	//unsigned* blcount = malloc(sizeof(unsigned) * MAX_BIT_LENGTH);
+	//unsigned* nextcode = malloc(sizeof(unsigned) * MAX_BIT_LENGTH);
+  if (!tree1d) {
+		SET_ERROR(upng, UPNG_ENOMEM);
+		return;
+  }
+
+	uint16_t bits, n, i;
+	uint16_t nodefilled = 0;	/*up to which node it is filled */
+	uint16_t treepos = 0;	/*position in the tree (1 of the numcodes columns) */
 
 	/* initialize local vectors */
-	memset(blcount, 0, sizeof(blcount));
-	memset(nextcode, 0, sizeof(nextcode));
+	memset(blcount, 0, sizeof(uint16_t) * MAX_BIT_LENGTH);
+	memset(nextcode, 0, sizeof(uint16_t) * MAX_BIT_LENGTH);
 
 	/*step 1: count number of instances of each code length */
 	for (bits = 0; bits < tree->numcodes; bits++) {
@@ -281,11 +289,14 @@ static void huffman_tree_create_lengths(upng_t* upng, huffman_tree* tree, const 
 			tree->tree2d[n] = 0;	/*remove possible remaining 32767's */
 		}
 	}
+	free(tree1d);
+	//free(blcount);
+	//free(nextcode);
 }
 
-static unsigned huffman_decode_symbol(upng_t *upng, const unsigned char *in, unsigned long *bp, const huffman_tree* codetree, unsigned long inlength)
+static uint16_t huffman_decode_symbol(upng_t *upng, const unsigned char *in, unsigned long *bp, const huffman_tree* codetree, unsigned long inlength)
 {
-	unsigned treepos = 0, ct;
+	uint16_t treepos = 0, ct;
 	unsigned char bit;
 	for (;;) {
 		/* error: end of input memory reached without endcode */
@@ -312,10 +323,19 @@ static unsigned huffman_decode_symbol(upng_t *upng, const unsigned char *in, uns
 /* get the tree of a deflated block with dynamic tree, the tree itself is also Huffman compressed with a known tree*/
 static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffman_tree* codetreeD, huffman_tree* codelengthcodetree, const unsigned char *in, unsigned long *bp, unsigned long inlength)
 {
-	unsigned codelengthcode[NUM_CODE_LENGTH_CODES];
-	unsigned bitlen[NUM_DEFLATE_CODE_SYMBOLS];
-	unsigned bitlenD[NUM_DISTANCE_SYMBOLS];
-	unsigned n, hlit, hdist, hclen, i;
+
+	//unsigned* codelengthcode = (unsigned*)malloc(sizeof(unsigned) * NUM_CODE_LENGTH_CODES);
+	uint16_t codelengthcode[NUM_CODE_LENGTH_CODES];
+	uint16_t* bitlen = (uint16_t*)malloc(sizeof(uint16_t) * NUM_DEFLATE_CODE_SYMBOLS);
+	//unsigned* bitlenD = (unsigned*)malloc(sizeof(unsigned) * NUM_DISTANCE_SYMBOLS);
+	uint16_t bitlenD[NUM_DISTANCE_SYMBOLS];
+  
+  if (!bitlen) {
+		SET_ERROR(upng, UPNG_ENOMEM);
+		return;
+  }
+
+  uint16_t n, hlit, hdist, hclen, i;
 
 	/*make sure that length values that aren't filled in will be 0, or a wrong tree will be generated */
 	/*C-code note: use no "return" between ctor and dtor of an uivector! */
@@ -325,8 +345,8 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 	}
 
 	/* clear bitlen arrays */
-	memset(bitlen, 0, sizeof(bitlen));
-	memset(bitlenD, 0, sizeof(bitlenD));
+	memset(bitlen, 0, sizeof(uint16_t) * NUM_DEFLATE_CODE_SYMBOLS);
+	memset(bitlenD, 0, sizeof(uint16_t) * NUM_DISTANCE_SYMBOLS);
 
 	/*the bit pointer is or will go past the memory */
 	hlit = read_bits(bp, in, 5) + 257;	/*number of literal/length codes + 257. Unlike the spec, the value 257 is added to it here already */
@@ -343,15 +363,17 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 
 	huffman_tree_create_lengths(upng, codelengthcodetree, codelengthcode);
 
+
 	/* bail now if we encountered an error earlier */
 	if (upng->error != UPNG_EOK) {
 		return;
 	}
 
+
 	/*now we can use this tree to read the lengths for the tree that this function will return */
 	i = 0;
 	while (i < hlit + hdist) {	/*i is the current symbol we're reading in the part that contains the code lengths of lit/len codes and dist codes */
-		unsigned code = huffman_decode_symbol(upng, in, bp, codelengthcodetree, inlength);
+		uint16_t code = huffman_decode_symbol(upng, in, bp, codelengthcodetree, inlength);
 		if (upng->error != UPNG_EOK) {
 			break;
 		}
@@ -364,8 +386,8 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 			}
 			i++;
 		} else if (code == 16) {	/*repeat previous */
-			unsigned replength = 3;	/*read in the 2 bits that indicate repeat length (3-6) */
-			unsigned value;	/*set value to the previous code */
+			uint16_t replength = 3;	/*read in the 2 bits that indicate repeat length (3-6) */
+			uint16_t value;	/*set value to the previous code */
 
 			if ((*bp) >> 3 >= inlength) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
@@ -396,7 +418,7 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 				i++;
 			}
 		} else if (code == 17) {	/*repeat "0" 3-10 times */
-			unsigned replength = 3;	/*read in the bits that indicate repeat length */
+			uint16_t replength = 3;	/*read in the bits that indicate repeat length */
 			if ((*bp) >> 3 >= inlength) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
 				break;
@@ -421,7 +443,7 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 				i++;
 			}
 		} else if (code == 18) {	/*repeat "0" 11-138 times */
-			unsigned replength = 11;	/*read in the bits that indicate repeat length */
+			uint16_t replength = 11;	/*read in the bits that indicate repeat length */
 			/* error, bit pointer jumps past memory */
 			if ((*bp) >> 3 >= inlength) {
 				SET_ERROR(upng, UPNG_EMALFORMED);
@@ -462,44 +484,49 @@ static void get_tree_inflate_dynamic(upng_t* upng, huffman_tree* codetree, huffm
 	if (upng->error == UPNG_EOK) {
 		huffman_tree_create_lengths(upng, codetreeD, bitlenD);
 	}
+	//free(codelengthcode);
+	free(bitlen);
+	//free(bitlenD);
 }
 
 /*inflate a block with dynamic of fixed Huffman tree*/
-static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outsize, const unsigned char *in, unsigned long *bp, unsigned long *pos, unsigned long inlength, unsigned btype)
+static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outsize, const unsigned char *in, unsigned long *bp, unsigned long *pos, unsigned long inlength, uint16_t btype)
 {
-	unsigned codetree_buffer[DEFLATE_CODE_BUFFER_SIZE];
-	unsigned codetreeD_buffer[DISTANCE_BUFFER_SIZE];
-	unsigned done = 0;
+  //Converted to malloc, was overflowing 2k stack on Pebble
+	uint16_t* codetree_buffer = (uint16_t*)malloc(sizeof(uint16_t) * DEFLATE_CODE_BUFFER_SIZE);
+	uint16_t codetreeD_buffer[DISTANCE_BUFFER_SIZE];
+  if (codetree_buffer == NULL) {
+		SET_ERROR(upng, UPNG_ENOMEM);
+		return;
+  }
+	uint16_t done = 0;
 
 	huffman_tree codetree;
 	huffman_tree codetreeD;
-  psleep(1);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman");
-  psleep(10);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman");
-  psleep(10);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "huffman");
-  psleep(10);
+
 
 	if (btype == 1) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "start btype 1");
 		/* fixed trees */
-		huffman_tree_init(&codetree, (unsigned*)FIXED_DEFLATE_CODE_TREE, NUM_DEFLATE_CODE_SYMBOLS, DEFLATE_CODE_BITLEN);
-		huffman_tree_init(&codetreeD, (unsigned*)FIXED_DISTANCE_TREE, NUM_DISTANCE_SYMBOLS, DISTANCE_BITLEN);
+		huffman_tree_init(&codetree, (uint16_t*)FIXED_DEFLATE_CODE_TREE, NUM_DEFLATE_CODE_SYMBOLS, DEFLATE_CODE_BITLEN);
+		huffman_tree_init(&codetreeD, (uint16_t*)FIXED_DISTANCE_TREE, NUM_DISTANCE_SYMBOLS, DISTANCE_BITLEN);
 	} else if (btype == 2) {
 		/* dynamic trees */
-		unsigned codelengthcodetree_buffer[CODE_LENGTH_BUFFER_SIZE];
+		uint16_t codelengthcodetree_buffer[CODE_LENGTH_BUFFER_SIZE];
 		huffman_tree codelengthcodetree;
 
+
 		huffman_tree_init(&codetree, codetree_buffer, NUM_DEFLATE_CODE_SYMBOLS, DEFLATE_CODE_BITLEN);
-		huffman_tree_init(&codetreeD, codetreeD_buffer, NUM_DISTANCE_SYMBOLS, DISTANCE_BITLEN);
+
+		
+    huffman_tree_init(&codetreeD, codetreeD_buffer, NUM_DISTANCE_SYMBOLS, DISTANCE_BITLEN);
 		huffman_tree_init(&codelengthcodetree, codelengthcodetree_buffer, NUM_CODE_LENGTH_CODES, CODE_LENGTH_BITLEN);
-		get_tree_inflate_dynamic(upng, &codetree, &codetreeD, &codelengthcodetree, in, bp, inlength);
+    
+    get_tree_inflate_dynamic(upng, &codetree, &codetreeD, &codelengthcodetree, in, bp, inlength);
 	}
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "start decode symbol");
+
 	while (done == 0) {
-		unsigned code = huffman_decode_symbol(upng, in, bp, &codetree, inlength);
+		uint16_t code = huffman_decode_symbol(upng, in, bp, &codetree, inlength);
 		if (upng->error != UPNG_EOK) {
 			return;
 		}
@@ -519,7 +546,7 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 		} else if (code >= FIRST_LENGTH_CODE_INDEX && code <= LAST_LENGTH_CODE_INDEX) {	/*length code */
 			/* part 1: get length base */
 			unsigned long length = LENGTH_BASE[code - FIRST_LENGTH_CODE_INDEX];
-			unsigned codeD, distance, numextrabitsD;
+			uint16_t codeD, distance, numextrabitsD;
 			unsigned long start, forward, backward, numextrabits;
 
 			/* part 2: get extra bits and add the value of that to length */
@@ -576,13 +603,17 @@ static void inflate_huffman(upng_t* upng, unsigned char* out, unsigned long outs
 			}
 		}
 	}
+
+  free(codetree_buffer);
+  //free(codetreeD_buffer);
+  return;
 }
 #endif //ifdef TINFL
 
 static void inflate_uncompressed(upng_t* upng, unsigned char* out, unsigned long outsize, const unsigned char *in, unsigned long *bp, unsigned long *pos, unsigned long inlength)
 {
 	unsigned long p;
-	unsigned len, nlen, n;
+	uint16_t len, nlen, n;
 
 	/* go to first boundary of byte */
 	while (((*bp) & 0x7) != 0) {
@@ -628,18 +659,16 @@ static void inflate_uncompressed(upng_t* upng, unsigned char* out, unsigned long
 /*inflate the deflated data (cfr. deflate spec); return value is the error*/
 static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned long outsize, const unsigned char *in, unsigned long insize, unsigned long inpos)
 {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "uz_inflate_data");
 	unsigned long bp = 0;	/*bit pointer in the "in" data, current byte is bp >> 3, current bit is bp & 0x7 (from lsb to msb of the byte) */
 	unsigned long pos = 0;	/*byte position in the out buffer */
 
-	unsigned done = 0;
+	uint16_t done = 0;
 
 	while (done == 0) {
-		unsigned btype;
+		uint16_t btype;
 
 		/* ensure next bit doesn't point past the end of the buffer */
 		if ((bp >> 3) >= insize) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "malformed upng");
 			SET_ERROR(upng, UPNG_EMALFORMED);
 			return upng->error;
 		}
@@ -650,14 +679,13 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
 
 		/* process control type appropriateyly */
 		if (btype == 3) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "malformed2 upng");
 			SET_ERROR(upng, UPNG_EMALFORMED);
 			return upng->error;
 		} else if (btype == 0) {
 			inflate_uncompressed(upng, out, outsize, &in[inpos], &bp, &pos, insize);	/*no compression */
 		} else {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "start huffman");
 #ifndef TINFL			
+      APP_LOG(APP_LOG_LEVEL_DEBUG,"png btype:%d",btype);
       inflate_huffman(upng, out, outsize, &in[inpos], &bp, &pos, insize, btype);	/*compression, btype 01 or 10 */
 #else
       tinfl_decompressor inflator;
@@ -665,12 +693,10 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
       tinfl_decompress(&inflator, &in[inpos], (size_t*)&insize, out, out, (uint8_t*)&outsize, 0);
 			inflate_uncompressed(upng, out, outsize, &in[inpos], &bp, &pos, insize);	/*no compression */
 #endif
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "done huffman");
 		}
 
 		/* stop if an error has occured */
 		if (upng->error != UPNG_EOK) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "error upng");
 			return upng->error;
 		}
 	}
@@ -680,7 +706,6 @@ static upng_error uz_inflate_data(upng_t* upng, unsigned char* out, unsigned lon
 
 static upng_error uz_inflate(upng_t* upng, unsigned char *out, unsigned long outsize, const unsigned char *in, unsigned long insize)
 {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "uz_inflate");
 	/* we require two bytes for the zlib data header */
 	if (insize < 2) {
 		SET_ERROR(upng, UPNG_EMALFORMED);
@@ -1076,11 +1101,8 @@ upng_error upng_decode(upng_t* upng)
 	}
 
 	/* allocate enough space for the (compressed and filtered) image data */
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "compressed_size:%d", compressed_size);
 	compressed = (unsigned char*)malloc(compressed_size);
 	if (compressed == NULL) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "FAILED: malloc compressed_size:%d", compressed_size);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "FAILED: malloc ptr:%p", compressed);
 		SET_ERROR(upng, UPNG_ENOMEM);
 		return upng->error;
 	}
@@ -1113,25 +1135,20 @@ upng_error upng_decode(upng_t* upng)
 
 	/* allocate space to store inflated (but still filtered) data */
 	inflated_size = ((upng->width * (upng->height * upng_get_bpp(upng) + 7)) / 8) + upng->height;
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "inflated_size:%d", inflated_size);
 	inflated = (unsigned char*)malloc(inflated_size);
 	if (inflated == NULL) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "FAILED: malloc inflated_size:%d", inflated_size);
 		free(compressed);
 		SET_ERROR(upng, UPNG_ENOMEM);
 		return upng->error;
 	}
 
 	/* decompress image data */
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "about to decompress");
 	error = uz_inflate(upng, inflated, inflated_size, compressed, compressed_size);
 	if (error != UPNG_EOK) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "decompress failed");
 		free(compressed);
 		free(inflated);
 		return upng->error;
 	}
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "decompress success");
 
 	/* free the compressed compressed data */
 	free(compressed);

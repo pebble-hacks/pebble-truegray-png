@@ -1,8 +1,8 @@
 {
-  "uuid": "9a42d2e8-e896-4abb-99c3-1a06b03b582e",
-  "shortName": "truegray-png",
-  "longName": "truegray-png",
-  "companyName": "MattHungerford",
+  "uuid": "5bfacb04-9449-461e-b3e6-7637d490ed53",
+  "shortName": "xkcd set 0",
+  "longName": "xkcd set 0 png viewer",
+  "companyName": "nicetux",
   "versionCode": 1,
   "versionLabel": "1.0.0",
   "watchapp": {
@@ -13,38 +13,145 @@
   },
   "resources": {
     "media": [
-    { 
+    {
       "type": "raw",
       "name": "IMAGE_1",
-      "file": "start_screen.png"
-    }, { 
+      "file": "xkcd_cover.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_2",
-      "file": "einstein.png"
-    }, { 
+      "file": "sudo_sandwich.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_3",
-      "file": "shuttle_port.png"
-    }, { 
+      "file": "00-tar.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_4",
-      "file": "dog.png"
-    }, { 
+      "file": "01-tar.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_5",
-      "file": "trex.png"
-    }, { 
+      "file": "03-tar.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_6",
-      "file": "supertux.png"
-    }, { 
+      "file": "relativity.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_7",
-      "file": "robot.png"
-    }, { 
+      "file": "caption_cats.png"
+    },
+    {
       "type": "raw",
       "name": "IMAGE_8",
-      "file": "shuttle.png"
+      "file": "pointers.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_9",
+      "file": "01-wake_up_sheeple.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_10",
+      "file": "03-wake_up_sheeple.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_11",
+      "file": "05-wake_up_sheeple.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_12",
+      "file": "october_30th.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_13",
+      "file": "00-a-minus-minus.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_14",
+      "file": "01-a-minus-minus.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_15",
+      "file": "02-a-minus-minus.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_16",
+      "file": "03-a-minus-minus.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_17",
+      "file": "00-broomstick.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_18",
+      "file": "01-broomstick.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_19",
+      "file": "03-broomstick.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_20",
+      "file": "00-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_21",
+      "file": "01-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_22",
+      "file": "02-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_23",
+      "file": "03-shoes.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_24",
+      "file": "00-skifree.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_25",
+      "file": "01-skifree.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_26",
+      "file": "02-skifree.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_27",
+      "file": "alternate_universe.png"
+    },
+    {
+      "type": "raw",
+      "name": "IMAGE_28",
+      "file": "rtl.png"
     }
     ]
   }
