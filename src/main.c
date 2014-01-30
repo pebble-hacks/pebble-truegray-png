@@ -5,7 +5,7 @@
 #include "upng.h"
 
 //#define max_images 15
-static uint8_t max_images = 14;
+static uint8_t max_images = 0;
 
 #define MAX(A,B) ((A>B) ? A : B)
 #define MIN(A,B) ((A<B) ? A : B)
@@ -266,9 +266,9 @@ static void window_unload(Window *window) {
 
 static void init(void) {
   //Discover how many images from base index
-//  while (resource_get_handle(RESOURCE_ID_IMAGE_1 + max_images)) {
-//    max_images++;
-//  }
+  while (resource_get_handle(RESOURCE_ID_IMAGE_1 + max_images)) {
+    max_images++;
+  }
   
 //APP_LOG(APP_LOG_LEVEL_DEBUG, "Stack Used:%ld SP:%p", bsp - sp, sp);
 
